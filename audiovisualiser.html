@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Emotion Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        h2 {
+            margin-top: 10px;
+            color: #333;
+        }
+        
+        .upload-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .preview-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .audio-preview, .visual-preview {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        audio {
+            width: 100%;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 300px;
+            background-color: black;
+            border-radius: 4px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .control-section h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .slider-container {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        
+        input[type="range"] {
+            width: 200px;
+            margin: 0 10px;
+        }
+        
+        input[type="color"] {
+            vertical-align: middle;
+            height: 25px;
+            margin: 0 10px;
+        }
+        
+        select {
+            margin: 0 10px;
+            padding: 5px;
+        }
+        
+        .value-display {
+            display: inline-block;
+            width: 40px;
+            text-align: center;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background-color: #3367d6;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .video-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e6f7ff;
+            border-radius: 8px;
+        }
+        
+        #recordingStatus {
+            margin-top: 10px;
+            padding: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Emotion Visualizer</h1>
+        
+        <div class="upload-section" id="dropZone">
+            <p>Drop your .wav file here or</p>
+            <input type="file" id="audioFile" accept="audio/wav" />
+            <p>File: <span id="fileName">No file selected</span></p>
+        </div>
+        
+        <div class="preview-section hidden" id="previewSection">
+            <div class="audio-preview">
+                <h2>Original Audio</h2>
+                <audio id="audioPlayer" controls></audio>
+            </div>
+            
+            <div class="visual-preview">
+                <h2>Emotion Visualization</h2>
+                <canvas id="visualizer"></canvas>
+            </div>
+        </div>
+        
+        <div class="controls hidden" id="controlsSection">
+            <h2>Visualization Controls</h2>
+            
+            <div class="control-section">
+                <h3>Basic Controls</h3>
+                <div class="slider-container">
+                    <label for="dotSize">Dot Size:</label>
+                    <input type="range" id="dotSize" min="1" max="20" value="5" />
+                    <span class="value-display" id="dotSizeValue">5</span>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="dotDensity">Dot Density:</label>
+                    <input type="range" id="dotDensity" min="10" max="200" value="50" />
+                    <span class="value-display" id="dotDensityValue">50</span>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="sensitivity">Sensitivity:</label>
+                    <input type="range" id="sensitivity" min="1" max="100" value="50" />
+                    <span class="value-display" id="sensitivityValue">50</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>Background Adjustments</h3>
+                <div class="slider-container">
+                    <label for="bgColor">Color:</label>
+                    <input type="color" id="bgColor" value="#000000" />
+                </div>
+                
+                <div class="slider-container">
+                    <label for="bgBrightness">Brightness:</label>
+                    <input type="range" id="bgBrightness" min="0" max="100" value="0" />
+                    <span class="value-display" id="bgBrightnessValue">0</span>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="bgContrast">Contrast:</label>
+                    <input type="range" id="bgContrast" min="0" max="200" value="100" />
+                    <span class="value-display" id="bgContrastValue">100</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>Dot Adjustments</h3>
+                <div class="slider-container">
+                    <label for="dotBaseColor">Base Color:</label>
+                    <input type="color" id="dotBaseColor" value="#ffffff" />
+                </div>
+                
+                <div class="slider-container">
+                    <label for="dotBrightness">Brightness:</label>
+                    <input type="range" id="dotBrightness" min="0" max="200" value="100" />
+                    <span class="value-display" id="dotBrightnessValue">100</span>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="dotContrast">Contrast:</label>
+                    <input type="range" id="dotContrast" min="0" max="200" value="100" />
+                    <span class="value-display" id="dotContrastValue">100</span>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="dotCurve">Curve:</label>
+                    <input type="range" id="dotCurve" min="0.1" max="3" step="0.1" value="1" />
+                    <span class="value-display" id="dotCurveValue">1</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <button id="playVisualization">Play Visualization</button>
+            </div>
+            
+            <div class="video-controls">
+                <h3>Video Export</h3>
+                <div class="slider-container">
+                    <label for="videoWidth">Width:</label>
+                    <input type="range" id="videoWidth" min="320" max="1920" step="16" value="1280" />
+                    <span class="value-display" id="videoWidthValue">1280</span>
+                </div>
+                
+                <div class="slider-container">
+                    <label for="videoHeight">Height:</label>
+                    <input type="range" id="videoHeight" min="240" max="1080" step="16" value="720" />
+                    <span class="value-display" id="videoHeightValue">720</span>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Aspect Ratio:</label>
+                    <select id="aspectRatio">
+                        <option value="custom">Custom</option>
+                        <option value="16:9" selected>16:9 (Landscape)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                        <option value="1:1">1:1 (Square)</option>
+                        <option value="4:3">4:3 (Classic)</option>
+                    </select>
+                </div>
+                
+                <button id="startRecording">Start Recording</button>
+                <button id="stopRecording" disabled>Stop Recording</button>
+                <button id="downloadVideo" disabled>Download Video</button>
+                <p id="recordingStatus"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('audioFile');
+            const fileName = document.getElementById('fileName');
+            const audioPlayer = document.getElementById('audioPlayer');
+            const previewSection = document.getElementById('previewSection');
+            const controlsSection = document.getElementById('controlsSection');
+            const canvas = document.getElementById('visualizer');
+            const ctx = canvas.getContext('2d');
+            
+            // Basic Control elements
+            const dotSizeSlider = document.getElementById('dotSize');
+            const dotSizeValue = document.getElementById('dotSizeValue');
+            const dotDensitySlider = document.getElementById('dotDensity');
+            const dotDensityValue = document.getElementById('dotDensityValue');
+            const sensitivitySlider = document.getElementById('sensitivity');
+            const sensitivityValue = document.getElementById('sensitivityValue');
+            const playVisualizationBtn = document.getElementById('playVisualization');
+            
+            // Background control elements
+            const bgColorPicker = document.getElementById('bgColor');
+            const bgBrightnessSlider = document.getElementById('bgBrightness');
+            const bgBrightnessValue = document.getElementById('bgBrightnessValue');
+            const bgContrastSlider = document.getElementById('bgContrast');
+            const bgContrastValue = document.getElementById('bgContrastValue');
+            
+            // Dot control elements
+            const dotBaseColorPicker = document.getElementById('dotBaseColor');
+            const dotBrightnessSlider = document.getElementById('dotBrightness');
+            const dotBrightnessValue = document.getElementById('dotBrightnessValue');
+            const dotContrastSlider = document.getElementById('dotContrast');
+            const dotContrastValue = document.getElementById('dotContrastValue');
+            const dotCurveSlider = document.getElementById('dotCurve');
+            const dotCurveValue = document.getElementById('dotCurveValue');
+            
+            // Video export elements
+            const videoWidthSlider = document.getElementById('videoWidth');
+            const videoWidthValue = document.getElementById('videoWidthValue');
+            const videoHeightSlider = document.getElementById('videoHeight');
+            const videoHeightValue = document.getElementById('videoHeightValue');
+            const aspectRatioSelect = document.getElementById('aspectRatio');
+            const startRecordingBtn = document.getElementById('startRecording');
+            const stopRecordingBtn = document.getElementById('stopRecording');
+            const downloadVideoBtn = document.getElementById('downloadVideo');
+            const recordingStatus = document.getElementById('recordingStatus');
+            
+            // Audio context and analyzers
+            let audioContext;
+            let audioSource;
+            let analyser;
+            let dataArray;
+            let bufferLength;
+            
+            // Visualization parameters
+            let dotSize = 5;
+            let dotDensity = 50;
+            let sensitivity = 50;
+            
+            // Background and dot style parameters
+            let bgColor = '#000000';
+            let bgBrightness = 0;
+            let bgContrast = 100;
+            
+            let dotBaseColor = '#ffffff';
+            let dotBrightness = 100;
+            let dotContrast = 100;
+            let dotCurve = 1;
+            
+            // Video parameters
+            let videoWidth = 1280;
+            let videoHeight = 720;
+            
+            // Recording variables
+            let mediaRecorder;
+            let recordedChunks = [];
+            let isRecording = false;
+            let recordingCanvas;
+            let recordingCtx;
+            let combinedStream;
+            
+            // Animation
+            let animationId;
+            let isPlaying = false;
+            
+            // Dots array for visualization
+            let dots = [];
+
+            // Create a hidden recording canvas once at startup
+            function createRecordingCanvas() {
+                recordingCanvas = document.createElement('canvas');
+                recordingCanvas.width = videoWidth;
+                recordingCanvas.height = videoHeight;
+                recordingCtx = recordingCanvas.getContext('2d');
+            }
+            
+            // Create recording canvas at startup
+            createRecordingCanvas();
+            
+            // Set canvas size
+            function resizeCanvas() {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                initDots();
+            }
+            
+            // Initialize dot positions
+            function initDots() {
+                dots = [];
+                const numDots = dotDensity;
+                
+                for (let i = 0; i < numDots; i++) {
+                    dots.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        size: dotSize,
+                        speedX: (Math.random() * 2 - 1) * 0.5,
+                        speedY: (Math.random() * 2 - 1) * 0.5,
+                        emotion: 0,
+                        brightness: 1 // Initial brightness value (0-1)
+                    });
+                }
+                
+                // Force immediate redraw
+                drawVisualization(ctx, canvas.width, canvas.height, 0.5, 0.5, 0.5);
+            }
+            
+            // Apply curve adjustment to value
+            function applyCurve(value, curve) {
+                return Math.pow(value, curve);
+            }
+            
+            // Convert hex color to RGB
+            function hexToRgb(hex) {
+                // Remove # if present
+                hex = hex.replace('#', '');
+                
+                // Parse hex values
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                
+                return { r, g, b };
+            }
+            
+            // Apply brightness and contrast to a color value
+            function applyBrightnessContrast(value, brightness, contrast) {
+                // Normalize values
+                const normBrightness = brightness / 100; 
+                const normContrast = contrast / 100;
+                
+                // Apply brightness (simple addition)
+                let adjusted = value + (normBrightness * 255);
+                
+                // Apply contrast (scale around middle gray)
+                adjusted = (adjusted - 128) * normContrast + 128;
+                
+                // Clamp to 0-255
+                return Math.max(0, Math.min(255, Math.round(adjusted)));
+            }
+            
+            // Handle file upload
+            function handleFileUpload(file) {
+                if (!file) return;
+                
+                if (file.type !== 'audio/wav') {
+                    alert('Please select a .wav file');
+                    return;
+                }
+                
+                fileName.textContent = file.name;
+                
+                // Release any existing object URL
+                if (audioPlayer.src) {
+                    URL.revokeObjectURL(audioPlayer.src);
+                }
+                
+                const objectURL = URL.createObjectURL(file);
+                audioPlayer.src = objectURL;
+                
+                previewSection.classList.remove('hidden');
+                controlsSection.classList.remove('hidden');
+                
+                // Resize canvas
+                resizeCanvas();
+                
+                // Set default values on UI elements
+                updateUIFromValues();
+                
+                // Setup audio on canplay event
+                audioPlayer.addEventListener('canplay', function onCanPlay() {
+                    setupAudioContext();
+                    audioPlayer.removeEventListener('canplay', onCanPlay);
+                });
+            }
+            
+            // Set up Web Audio API
+            function setupAudioContext() {
+                try {
+                    // Close any existing audio context
+                    if (audioContext && audioContext.state !== 'closed') {
+                        audioContext.close();
+                    }
+                    
+                    // Create new audio context
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Create analyzer
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 1024;
+                    bufferLength = analyser.frequencyBinCount;
+                    dataArray = new Uint8Array(bufferLength);
+                    
+                    // Create audio source node
+                    audioSource = audioContext.createMediaElementSource(audioPlayer);
+                    audioSource.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    
+                    console.log("Audio context setup successful");
+                } catch (error) {
+                    console.error("Error setting up audio context:", error);
+                    alert("Error setting up audio visualization. Please try again or use a different browser.");
+                }
+            }
+            
+            // Start visualization
+            function startVisualization() {
+                if (audioPlayer.paused) {
+                    audioPlayer.play()
+                        .catch(error => {
+                            console.error('Error playing audio:', error);
+                            alert('Error playing audio. Please try again.');
+                        });
+                }
+                
+                isPlaying = true;
+                visualize();
+            }
+            
+            // Stop visualization
+            function stopVisualization() {
+                isPlaying = false;
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+            }
+            
+            // Update the recording canvas dimensions
+            function updateRecordingCanvasDimensions() {
+                if (recordingCanvas) {
+                    recordingCanvas.width = videoWidth;
+                    recordingCanvas.height = videoHeight;
+                }
+            }
+            
+            // Update UI elements to reflect the internal values
+            function updateUIFromValues() {
+                // Basic controls
+                dotSizeSlider.value = dotSize;
+                dotSizeValue.textContent = dotSize;
+                
+                dotDensitySlider.value = dotDensity;
+                dotDensityValue.textContent = dotDensity;
+                
+                sensitivitySlider.value = sensitivity;
+                sensitivityValue.textContent = sensitivity;
+                
+                // Background controls
+                bgColorPicker.value = bgColor;
+                
+                bgBrightnessSlider.value = bgBrightness;
+                bgBrightnessValue.textContent = bgBrightness;
+                
+                bgContrastSlider.value = bgContrast;
+                bgContrastValue.textContent = bgContrast;
+                
+                // Dot controls
+                dotBaseColorPicker.value = dotBaseColor;
+                
+                dotBrightnessSlider.value = dotBrightness;
+                dotBrightnessValue.textContent = dotBrightness;
+                
+                dotContrastSlider.value = dotContrast;
+                dotContrastValue.textContent = dotContrast;
+                
+                dotCurveSlider.value = dotCurve;
+                dotCurveValue.textContent = dotCurve;
+                
+                // Video controls
+                videoWidthSlider.value = videoWidth;
+                videoWidthValue.textContent = videoWidth;
+                
+                videoHeightSlider.value = videoHeight;
+                videoHeightValue.textContent = videoHeight;
+            }
+            
+            // Visualize audio data
+            function visualize() {
+                if (!isPlaying) return;
+                
+                animationId = requestAnimationFrame(visualize);
+                
+                // Get audio data
+                if (analyser) {
+                    analyser.getByteFrequencyData(dataArray);
+                    
+                    // Calculate emotional values from audio data
+                    const bassValue = getAverageFrequency(0, 10) / 255;
+                    const midValue = getAverageFrequency(11, 100) / 255;
+                    const highValue = getAverageFrequency(101, 255) / 255;
+                    
+                    // Map to emotion parameters
+                    const intensity = bassValue * (sensitivity / 50);
+                    const complexity = midValue * (sensitivity / 50);
+                    const brightness = highValue * (sensitivity / 50);
+                    
+                    // Draw on main canvas
+                    drawVisualization(ctx, canvas.width, canvas.height, intensity, complexity, brightness);
+                    
+                    // If recording, also draw on the recording canvas
+                    if (isRecording && recordingCtx) {
+                        drawVisualization(recordingCtx, videoWidth, videoHeight, intensity, complexity, brightness);
+                    }
+                }
+            }
+            
+            // Draw visualization on the specified context
+            function drawVisualization(context, width, height, intensity, complexity, brightness) {
+                // Apply background color
+                context.fillStyle = bgColor;
+                context.fillRect(0, 0, width, height);
+                
+                // Apply brightness and contrast to the entire background
+                const imageData = context.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                // Get background color components
+                const bgRgb = hexToRgb(bgColor);
+                
+                // Process each pixel for background
+                for (let i = 0; i < data.length; i += 4) {
+                    // Apply brightness and contrast to background
+                    data[i] = applyBrightnessContrast(bgRgb.r, bgBrightness, bgContrast);     // R
+                    data[i + 1] = applyBrightnessContrast(bgRgb.g, bgBrightness, bgContrast); // G
+                    data[i + 2] = applyBrightnessContrast(bgRgb.b, bgBrightness, bgContrast); // B
+                    // Alpha remains unchanged
+                }
+                
+                context.putImageData(imageData, 0, 0);
+                
+                // Scale factor for different sized canvases
+                const scaleX = width / canvas.width;
+                const scaleY = height / canvas.height;
+                
+                // Get dot base color
+                const dotRgb = hexToRgb(dotBaseColor);
+                
+                // Update and draw dots
+                for (let i = 0; i < dots.length; i++) {
+                    const dot = dots[i];
+                    
+                    // Only update positions if this is the main visualization canvas
+                    if (context === ctx) {
+                        // Update position based on complexity (movement)
+                        dot.x += dot.speedX * complexity * 5;
+                        dot.y += dot.speedY * complexity * 5;
+                        
+                        // Bounce off walls
+                        if (dot.x < 0 || dot.x > canvas.width) {
+                            dot.speedX *= -1;
+                            dot.x = Math.max(0, Math.min(dot.x, canvas.width));
+                        }
+                        
+                        if (dot.y < 0 || dot.y > canvas.height) {
+                            dot.speedY *= -1;
+                            dot.y = Math.max(0, Math.min(dot.y, canvas.height));
+                        }
+                        
+                        // Update size based on intensity
+                        dot.size = dotSize * (1 + intensity);
+                        
+                        // Update brightness based on audio
+                        dot.brightness = brightness;
+                    }
+                    
+                    // Calculate positions for the current canvas
+                    const x = dot.x * scaleX;
+                    const y = dot.y * scaleY;
+                    const size = dot.size * (scaleX + scaleY) / 2;
+                    
+                    // Apply dot curve to brightness
+                    const adjustedBrightness = applyCurve(dot.brightness, dotCurve);
+                    
+                    // Calculate dot color with applied brightness and contrast
+                    const r = applyBrightnessContrast(
+                        Math.round(dotRgb.r * adjustedBrightness), 
+                        dotBrightness, 
+                        dotContrast
+                    );
+                    const g = applyBrightnessContrast(
+                        Math.round(dotRgb.g * adjustedBrightness), 
+                        dotBrightness, 
+                        dotContrast
+                    );
+                    const b = applyBrightnessContrast(
+                        Math.round(dotRgb.b * adjustedBrightness), 
+                        dotBrightness, 
+                        dotContrast
+                    );
+                    
+                    // Draw dot
+                    context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    context.beginPath();
+                    context.arc(x, y, size, 0, Math.PI * 2);
+                    context.fill();
+                }
+            }
+            
+            // Get average frequency value for a range
+            function getAverageFrequency(start, end) {
+                let sum = 0;
+                let count = 0;
+                
+                for (let i = start; i <= end && i < bufferLength; i++) {
+                    sum += dataArray[i];
+                    count++;
+                }
+                
+                return count > 0 ? sum / count : 0;
+            }
+            
+            // Start recording
+            function startRecording() {
+                if (isRecording) return;
+                
+                recordedChunks = [];
+                
+                try {
+                    // Make sure recording canvas is up to date
+                    updateRecordingCanvasDimensions();
+                    
+                    // Create a stream from the canvas
+                    const canvasStream = recordingCanvas.captureStream(30);
+                    
+                    // Create an audio destination node to capture audio
+                    const audioDestination = audioContext.createMediaStreamDestination();
+                    audioSource.connect(audioDestination);
+                    
+                    // Get video and audio tracks
+                    const videoTracks = canvasStream.getVideoTracks();
+                    const audioTracks = audioDestination.stream.getAudioTracks();
+                    
+                    // Create a combined stream with both audio and video
+                    combinedStream = new MediaStream();
+                    videoTracks.forEach(track => combinedStream.addTrack(track));
+                    audioTracks.forEach(track => combinedStream.addTrack(track));
+                    
+                    // Create media recorder
+                    mediaRecorder = new MediaRecorder(combinedStream, {
+                        mimeType: 'video/webm;codecs=vp8,opus'
+                    });
+                    
+                    // Handle data available event
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            recordedChunks.push(e.data);
+                        }
+                    };
+                    
+                    // Handle recording stop
+                    mediaRecorder.onstop = () => {
+                        combinedStream.getTracks().forEach(track => track.stop());
+                        downloadVideoBtn.disabled = false;
+                        startRecordingBtn.disabled = false;
+                        stopRecordingBtn.disabled = true;
+                        recordingStatus.textContent = 'Recording complete. Click "Download Video" to save.';
+                    };
+                    
+                    // Start recording
+                    mediaRecorder.start(100); // Collect 100ms chunks
+                    isRecording = true;
+                    
+                    // Update UI
+                    startRecordingBtn.disabled = true;
+                    stopRecordingBtn.disabled = false;
+                    recordingStatus.textContent = 'Recording... (Video with audio)';
+                    
+                    // Make sure visualization is playing
+                    if (!isPlaying) {
+                        startVisualization();
+                    }
+                } catch (error) {
+                    console.error('Error starting recording:', error);
+                    recordingStatus.textContent = 'Recording failed: ' + error.message;
+                }
+            }
+            
+            // Stop recording
+            function stopRecording() {
+                if (!isRecording || !mediaRecorder) return;
+                
+                try {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                } catch (error) {
+                    console.error('Error stopping recording:', error);
+                    recordingStatus.textContent = 'Error stopping recording: ' + error.message;
+                }
+            }
+            
+            // Download the recorded video
+            function downloadVideo() {
+                if (recordedChunks.length === 0) {
+                    recordingStatus.textContent = 'No recording available to download.';
+                    return;
+                }
+                
+                try {
+                    // Create blob from recorded chunks
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    
+                    // Create download link
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'visualization_' + new Date().toISOString().replace(/[:.]/g, '-') + '.webm';
+                    
+                    // Add to DOM and trigger download
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                    recordingStatus.textContent = 'Video downloaded successfully.';
+                } catch (error) {
+                    console.error('Error downloading video:', error);
+                    recordingStatus.textContent = 'Error downloading video: ' + error.message;
+                }
+            }
+            
+            // Update aspect ratio
+            function updateAspectRatio() {
+                const ratio = aspectRatioSelect.value;
+                
+                if (ratio === 'custom') {
+                    return; // Allow custom values
+                }
+                
+                // Parse ratio (e.g., "16:9")
+                const [width, height] = ratio.split(':').map(Number);
+                
+                // Set height based on selected width to maintain aspect ratio
+                const newHeight = Math.round((videoWidth * height) / width);
+                videoHeight = newHeight;
+                
+                // Update slider and display
+                videoHeightSlider.value = newHeight;
+                videoHeightValue.textContent = newHeight;
+                
+                // Update recording canvas
+                updateRecordingCanvasDimensions();
+            }
+            
+            // Force redraw visualization
+            function forceRedraw() {
+                // If already playing, the next frame will use the new values
+                if (!isPlaying && dots.length > 0) {
+                    // Just draw a single frame with current settings
+                    drawVisualization(ctx, canvas.width, canvas.height, 0.5, 0.5, 0.5);
+                }
+            }
+            
+            // Event Listeners
+            window.addEventListener('resize', resizeCanvas);
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#4285f4';
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.borderColor = '#ccc';
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#ccc';
+                
+                if (e.dataTransfer.files.length) {
+                    handleFileUpload(e.dataTransfer.files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+            
+            playVisualizationBtn.addEventListener('click', () => {
+                if (isPlaying) {
+                    playVisualizationBtn.textContent = 'Play Visualization';
+                    audioPlayer.pause();
+                    stopVisualization();
+                } else {
+                    playVisualizationBtn.textContent = 'Pause Visualization';
+                    startVisualization();
+                }
+            });
+            
+            audioPlayer.addEventListener('pause', () => {
+                if (isPlaying) {
+                    playVisualizationBtn.textContent = 'Play Visualization';
+                    stopVisualization();
+                }
+            });
+            
+            audioPlayer.addEventListener('ended', () => {
+                playVisualizationBtn.textContent = 'Play Visualization';
+                stopVisualization();
+            });
+            
+            // Basic controls
+            dotSizeSlider.addEventListener('input', (e) => {
+                dotSize = parseInt(e.target.value);
+                dotSizeValue.textContent = dotSize;
+                forceRedraw();
+            });
+            
+            dotDensitySlider.addEventListener('input', (e) => {
+                dotDensity = parseInt(e.target.value);
+                dotDensityValue.textContent = dotDensity;
+                initDots();
+            });
+            
+            sensitivitySlider.addEventListener('input', (e) => {
+                sensitivity = parseInt(e.target.value);
+                sensitivityValue.textContent = sensitivity;
+                forceRedraw();
+            });
+            
+            // Background controls
+            bgColorPicker.addEventListener('input', (e) => {
+                bgColor = e.target.value;
+                forceRedraw();
+            });
+            
+            bgBrightnessSlider.addEventListener('input', (e) => {
+                bgBrightness = parseInt(e.target.value);
+                bgBrightnessValue.textContent = bgBrightness;
+                forceRedraw();
+            });
+            
+            bgContrastSlider.addEventListener('input', (e) => {
+                bgContrast = parseInt(e.target.value);
+                bgContrastValue.textContent = bgContrast;
+                forceRedraw();
+            });
+            
+            // Dot controls
+            dotBaseColorPicker.addEventListener('input', (e) => {
+                dotBaseColor = e.target.value;
+                forceRedraw();
+            });
+            
+            dotBrightnessSlider.addEventListener('input', (e) => {
+                dotBrightness = parseInt(e.target.value);
+                dotBrightnessValue.textContent = dotBrightness;
+                forceRedraw();
+            });
+            
+            dotContrastSlider.addEventListener('input', (e) => {
+                dotContrast = parseInt(e.target.value);
+                dotContrastValue.textContent = dotContrast;
+                forceRedraw();
+            });
+            
+            dotCurveSlider.addEventListener('input', (e) => {
+                dotCurve = parseFloat(e.target.value);
+                dotCurveValue.textContent = dotCurve;
+                forceRedraw();
+            });
+            
+            // Video export controls
+            videoWidthSlider.addEventListener('input', (e) => {
+                videoWidth = parseInt(e.target.value);
+                videoWidthValue.textContent = videoWidth;
+                updateAspectRatio();
+            });
+            
+            videoHeightSlider.addEventListener('input', (e) => {
+                videoHeight = parseInt(e.target.value);
+                videoHeightValue.textContent = videoHeight;
+                aspectRatioSelect.value = 'custom';
+                updateRecordingCanvasDimensions();
+            });
+            
+            aspectRatioSelect.addEventListener('change', updateAspectRatio);
+            
+            startRecordingBtn.addEventListener('click', startRecording);
+            stopRecordingBtn.addEventListener('click', stopRecording);
+            downloadVideoBtn.addEventListener('click', downloadVideo);
+        });
+    </script>
+</body>
+</html>
